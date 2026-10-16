@@ -1,0 +1,74 @@
+name: GXQ Network V3.0.0 CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run TypeScript Check
+        run: pnpm lint
+      - name: Build Application
+        run: pnpm build
+
+  smart-contract-tests-and-slither:
+    name: Solidity Tests & Static Security Audit (Slither)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Compile Hardhat Contracts
+        run: pnpm --filter @gxq/contracts compile
+      - name: Run Hardhat Unit & Integration Tests
+        run: pnpm --filter @gxq/contracts test
+      - name: Run Slither Security Analyzer
+        uses: crytic/slither-action@v0.4.0
+        continue-on-error: true
+        with:
+          target: packages/contracts
+          slither-args: --solc-remaps @=packages/contracts/src/ --exclude-low --exclude-informational
+
+  cypress-e2e-tests:
+    name: Cypress Multi-Environment E2E Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [local, devnet, testnet]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Start Background Infrastructure (Postgres + Redis)
+        run: docker compose -f infrastructure/docker-compose.yml up -d
+      - name: Run Cypress Headless Specs
+        run: npx cypress run --config-file cypress.config.ts --env targetEnv=${{ matrix.environment }}

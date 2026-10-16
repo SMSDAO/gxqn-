@@ -1,0 +1,28 @@
+{
+  "network": "mainnet",
+  "chainId": 9000,
+  "deployer": null,
+  "status": "PENDING_FORMAL_AUDIT_AND_GENESIS",
+  "auditWarning": "MAINNET NOT AUDITED. DO NOT DEPLOY TO PRODUCTION WITHOUT COMPLETED CERTIFIED AUDIT AND MULTISIG GOVERNANCE",
+  "timestamp": null,
+  "blockNumber": null,
+  "contracts": {
+    "GXQToken": {
+      "address": null,
+      "symbol": "GXQ",
+      "decimals": 18
+    },
+    "TokenFactory": {
+      "address": null
+    },
+    "SimpleSwap": {
+      "address": null
+    },
+    "GXQStaking": {
+      "address": null
+    },
+    "AccountRegistry": {
+      "address": null
+    }
+  }
+}

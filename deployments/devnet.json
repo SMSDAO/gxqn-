@@ -1,0 +1,29 @@
+{
+  "network": "devnet",
+  "chainId": 9002,
+  "deployer": "0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db",
+  "timestamp": "2026-10-15T04:12:00.000Z",
+  "blockNumber": 12840,
+  "contracts": {
+    "GXQToken": {
+      "address": "0x32A5c93F164F1A65dCd13b4E8f85f368C838A64b",
+      "symbol": "dGXQ",
+      "decimals": 18,
+      "totalSupply": "100000000000000000000000000"
+    },
+    "TokenFactory": {
+      "address": "0x81C7E95C227e51086C45c859fC3FeEa782aC9595"
+    },
+    "SimpleSwap": {
+      "address": "0xB045952d7eB221aA24f8d298Ce35DeA91f63D851",
+      "feeBps": 30
+    },
+    "GXQStaking": {
+      "address": "0x5C05Eb7943F5B8e7b3A73Ec5D8F0b2529A5CdE1B",
+      "rewardRateAnnualBps": 1480
+    },
+    "AccountRegistry": {
+      "address": "0x1A2B3C4D5E6F7890123456789ABCDEF012345678"
+    }
+  }
+}

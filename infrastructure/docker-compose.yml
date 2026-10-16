@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # PostgreSQL: Primary Relational Source of Truth for Explorer & Account Abstraction Registry
+  postgres:
+    image: postgres:16-alpine
+    container_name: gxq-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: gxq_local
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../packages/explorer-api/src/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis: In-Memory High-Speed Cache for Tickers, Mempool, and Explorer Stats
+  redis:
+    image: redis:7-alpine
+    container_name: gxq-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes --requirepass redispassword
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redispassword", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Hardhat Local Node (Chain ID: 31337)
+  hardhat-node:
+    image: node:20-alpine
+    container_name: gxq-hardhat
+    working_dir: /app
+    volumes:
+      - ..:/app
+    command: sh -c "npx hardhat node --hostname 0.0.0.0"
+    ports:
+      - "8545:8545"
+
+volumes:
+  pgdata:
+  redisdata:

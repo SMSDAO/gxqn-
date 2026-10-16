@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #030507;
+    --bg-secondary: #070B12;
+    --blue-primary: #00A8FF;
+    --orange-primary: #FF7A00;
+    --red-primary: #FF304F;
+    --yellow-primary: #FFD400;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: #F5F7FA;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Cyber-Futuristic Grid Background */
+.cyber-grid {
+  background-image: 
+    linear-gradient(to right, rgba(0, 168, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 168, 255, 0.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+.cyber-radial-glow {
+  background: radial-gradient(circle at 50% 0%, rgba(0, 168, 255, 0.12) 0%, rgba(168, 85, 247, 0.05) 35%, transparent 70%);
+}
+
+/* Glass Surface Effects */
+.glass-panel {
+  background: rgba(7, 11, 18, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-elevated {
+  background: rgba(11, 19, 43, 0.70);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 168, 255, 0.20);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8), 0 0 20px -5px rgba(0, 168, 255, 0.1);
+}
+
+/* Flash Animations */
+@keyframes flash-blue {
+  0% { box-shadow: 0 0 0 0 rgba(0, 168, 255, 0.7); border-color: #00A8FF; }
+  50% { box-shadow: 0 0 25px 4px rgba(0, 168, 255, 0.9); border-color: #ffffff; }
+  100% { box-shadow: 0 0 0 0 rgba(0, 168, 255, 0); border-color: rgba(255, 255, 255, 0.1); }
+}
+
+@keyframes flash-orange {
+  0% { box-shadow: 0 0 0 0 rgba(255, 122, 0, 0.7); border-color: #FF7A00; }
+  50% { box-shadow: 0 0 25px 4px rgba(255, 122, 0, 0.9); border-color: #ffffff; }
+  100% { box-shadow: 0 0 0 0 rgba(255, 122, 0, 0); border-color: rgba(255, 255, 255, 0.1); }
+}
+
+@keyframes flash-green {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); border-color: #10B981; }
+  50% { box-shadow: 0 0 25px 4px rgba(16, 185, 129, 0.9); border-color: #ffffff; }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); border-color: rgba(255, 255, 255, 0.1); }
+}
+
+@keyframes flash-red {
+  0% { box-shadow: 0 0 0 0 rgba(255, 48, 79, 0.7); border-color: #FF304F; }
+  50% { box-shadow: 0 0 25px 4px rgba(255, 48, 79, 0.9); border-color: #ffffff; }
+  100% { box-shadow: 0 0 0 0 rgba(255, 48, 79, 0); border-color: rgba(255, 255, 255, 0.1); }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(0.995); }
+}
+
+.animate-flash-blue {
+  animation: flash-blue 0.6s ease-out;
+}
+
+.animate-flash-orange {
+  animation: flash-orange 0.6s ease-out;
+}
+
+.animate-flash-green {
+  animation: flash-green 0.6s ease-out;
+}
+
+.animate-flash-red {
+  animation: flash-red 0.6s ease-out;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #030507;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 168, 255, 0.5);
+}
+
+/* Accessibility: Prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

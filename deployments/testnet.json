@@ -1,0 +1,29 @@
+{
+  "network": "testnet",
+  "chainId": 9001,
+  "deployer": "0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB",
+  "timestamp": "2026-10-15T02:00:00.000Z",
+  "blockNumber": 240952,
+  "contracts": {
+    "GXQToken": {
+      "address": "0x71C67E7d25e0bCd9426f0f423A7a14E52445E814",
+      "symbol": "tGXQ",
+      "decimals": 18,
+      "totalSupply": "100000000000000000000000000"
+    },
+    "TokenFactory": {
+      "address": "0x99A82D0FeC5248a3c86EB095b29094B184FE4e07"
+    },
+    "SimpleSwap": {
+      "address": "0x4386A2E4cf6eFA190FfE0eA4dC9fD3C23a48e895",
+      "feeBps": 30
+    },
+    "GXQStaking": {
+      "address": "0x27D5f25262B51F9B93556f8f53Ac069477028471",
+      "rewardRateAnnualBps": 1480
+    },
+    "AccountRegistry": {
+      "address": "0x9876543210FEDCBA9876543210FEDCBA98765432"
+    }
+  }
+}

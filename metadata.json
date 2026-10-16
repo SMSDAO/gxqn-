@@ -1,0 +1,6 @@
+{
+  "name": "GXQ Network V3.0.0 Enterprise Command Center",
+  "description": "Production-grade, multi-environment Web3 ecosystem with Account Abstraction, DEX, Staking, Launchpad, Explorer, and AI Intelligence for GXQ Network.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
