@@ -23,6 +23,7 @@ import {
   ArrowDownRight,
   Filter
 } from 'lucide-react';
+import { ReorderableCardSection, SectionItem } from '../common/ReorderableCardSection';
 
 interface StakeModuleProps {
   envConfig: EnvironmentConfig;
@@ -321,157 +322,175 @@ export const StakeModule: React.FC<StakeModuleProps> = ({
         </div>
       </div>
 
-      {/* Overview Metric Cards (Always Accessible) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <GlassCard level={2} className="p-5">
-          <div className="text-xs text-gray-400 mb-1 flex items-center justify-between">
-            <span>Your Active Staked</span>
-            <span className="text-[10px] text-[#00A8FF] font-mono">BFT Sequencer</span>
-          </div>
-          <div className="text-2xl font-black font-mono text-white">
-            {totalStaked.toLocaleString()} <span className="text-xs text-[#00A8FF]">GXQ</span>
-          </div>
-          <div className="text-[11px] text-gray-500 font-mono mt-1">
-            ≈ ${(totalStaked * 1.482).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
-          </div>
-        </GlassCard>
-
-        <GlassCard level={3} glow="blue" className="p-5">
-          <div className="text-xs text-gray-400 mb-1 flex items-center justify-between">
-            <span>Accruing Rewards</span>
-            <span className="text-[10px] text-[#10B981] font-mono">Real-Time Yield</span>
-          </div>
-          <div className="text-2xl font-black font-mono text-[#10B981]">
-            +{totalRewards.toFixed(4)} <span className="text-xs">GXQ</span>
-          </div>
-          <div className="text-[11px] text-gray-500 font-mono mt-1">Accruing every block (3.2s)</div>
-        </GlassCard>
-
-        <GlassCard level={2} className="p-5">
-          <div className="text-xs text-gray-400 mb-1 flex items-center justify-between">
-            <span>Lifetime Earned Rewards</span>
-            <span className="text-[10px] text-purple-400 font-mono">On-Chain Verified</span>
-          </div>
-          <div className="text-2xl font-black font-mono text-purple-400">
-            +{historyMetrics.totalRewardsClaimed.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-xs">GXQ</span>
-          </div>
-          <div className="text-[11px] text-gray-500 font-mono mt-1">{historyMetrics.count} recorded staking transactions</div>
-        </GlassCard>
-      </div>
-
       {/* SUB-VIEW 1: STAKING VAULTS & ACTIVE DEPOSITS */}
       {activeSubTab === 'vaults' && (
-        <>
-          {/* Stake Form Card */}
-          <GlassCard level={3} className="p-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-4 flex items-center justify-between">
-              <span>Stake GXQ Tokens</span>
-              <span className="text-xs font-mono text-emerald-400 font-normal">Vault TVL: 38.4M GXQ</span>
-            </h3>
+        <ReorderableCardSection
+          storageKey="gxq_stake_vaults_layout"
+          items={[
+            {
+              id: 'stake_form',
+              title: 'Stake GXQ Tokens',
+              subtitle: 'Vault TVL: 38.4M GXQ • Dynamic Lockup Yield Multiplier',
+              neonColor: 'yellow',
+              icon: <Coins className="w-4 h-4 text-[#FFD400]" />,
+              content: (
+                <div className="space-y-4">
+                  {/* Tier Selector */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {tiers.map((tier) => (
+                      <button
+                        key={tier.days}
+                        onClick={() => setSelectedDuration(tier.days)}
+                        className={`p-3.5 rounded-xl border text-left transition-all ${
+                          selectedDuration === tier.days
+                            ? 'bg-[#FFD400]/20 border-[#FFD400] shadow-[0_0_15px_rgba(255,212,0,0.2)]'
+                            : 'bg-white/5 border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="text-xs font-semibold text-gray-300">{tier.label}</div>
+                        <div className="text-lg font-black font-mono text-white mt-1">{tier.apr}% <span className="text-[10px] text-gray-400">APR</span></div>
+                        <div className="text-[10px] font-mono text-[#FFD400] mt-0.5">{tier.mult} Multiplier</div>
+                      </button>
+                    ))}
+                  </div>
 
-            {/* Tier Selector */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              {tiers.map((tier) => (
-                <button
-                  key={tier.days}
-                  onClick={() => setSelectedDuration(tier.days)}
-                  className={`p-3.5 rounded-xl border text-left transition-all ${
-                    selectedDuration === tier.days
-                      ? 'bg-[#00A8FF]/20 border-[#00A8FF] shadow-[0_0_15px_rgba(0,168,255,0.2)]'
-                      : 'bg-white/5 border-white/10 hover:border-white/20'
-                  }`}
-                >
-                  <div className="text-xs font-semibold text-gray-300">{tier.label}</div>
-                  <div className="text-lg font-black font-mono text-white mt-1">{tier.apr}% <span className="text-[10px] text-gray-400">APR</span></div>
-                  <div className="text-[10px] font-mono text-[#00A8FF] mt-0.5">{tier.mult} Yield Multiplier</div>
-                </button>
-              ))}
-            </div>
-
-            {/* Amount Input */}
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 mb-4">
-              <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
-                <span>Deposit Amount</span>
-                <span>Available: <span className="font-mono text-white">4,820.00 GXQ</span></span>
-              </div>
-              <div className="flex items-center justify-between">
-                <input
-                  type="number"
-                  value={stakeAmount}
-                  onChange={(e) => setStakeAmount(e.target.value)}
-                  placeholder="0.0"
-                  className="w-full bg-transparent text-xl font-bold font-mono text-white outline-none"
-                />
-                <span className="font-mono font-bold text-xs px-2.5 py-1 rounded bg-[#00A8FF]/20 text-[#00A8FF]">GXQ</span>
-              </div>
-            </div>
-
-            {successMsg && (
-              <div className="p-3 mb-4 rounded-lg bg-[#10B981]/15 border border-[#10B981]/30 text-xs text-[#10B981] flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>{successMsg}</span>
-              </div>
-            )}
-
-            <button
-              onClick={handleStake}
-              disabled={isSubmitting || !envConfig.featureFlags.isStakingEnabled}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#00A8FF] to-[#008CFF] text-black font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-98 transition-all shadow-[0_0_20px_rgba(0,168,255,0.3)]"
-            >
-              {isSubmitting ? 'Staking & Locking Tokens on Sequencer...' : user ? 'Confirm Staking Position' : 'Connect Wallet to Stake'}
-            </button>
-          </GlassCard>
-
-          {/* Active Positions */}
-          <GlassCard level={2} className="p-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-4 flex items-center justify-between">
-              <span>Your Active Staking Positions</span>
-              <button 
-                onClick={() => setActiveSubTab('history')} 
-                className="text-xs text-[#00A8FF] hover:underline font-mono flex items-center gap-1"
-              >
-                <span>View Full History</span>
-                <ArrowUpRight className="w-3.5 h-3.5" />
-              </button>
-            </h3>
-
-            <div className="space-y-3">
-              {stakes.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-4 rounded-xl bg-[#070B12] border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white">{item.tierName}</span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
-                        {item.aprPercent}% APR
-                      </span>
+                  {/* Amount Input */}
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="flex items-center justify-between text-xs text-gray-400 mb-2 font-mono">
+                      <span>Deposit Amount</span>
+                      <span>Available: <span className="font-mono text-white font-bold">4,820.00 GXQ</span></span>
                     </div>
-                    <div className="text-[11px] text-gray-400 font-mono mt-1">
-                      Deposited: <span className="text-white font-semibold">{item.amount.toLocaleString()} GXQ</span> • Staked on {new Date(item.startDate).toLocaleDateString()}
+                    <div className="flex items-center justify-between">
+                      <input
+                        type="number"
+                        value={stakeAmount}
+                        onChange={(e) => setStakeAmount(e.target.value)}
+                        placeholder="0.0"
+                        className="w-full bg-transparent text-xl font-bold font-mono text-white outline-none"
+                      />
+                      <span className="font-mono font-bold text-xs px-2.5 py-1 rounded bg-[#00A8FF]/20 text-[#00A8FF]">GXQ</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 self-end sm:self-auto">
-                    <div className="text-right">
-                      <div className="text-[10px] text-gray-400 uppercase font-mono">Unclaimed Reward</div>
-                      <div className="text-xs font-bold font-mono text-[#10B981]">+{item.claimableReward.toFixed(4)} GXQ</div>
+                  {successMsg && (
+                    <div className="p-3 rounded-lg bg-[#10B981]/15 border border-[#10B981]/30 text-xs text-[#10B981] flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>{successMsg}</span>
                     </div>
+                  )}
 
-                    <button
-                      onClick={() => handleClaimReward(item.id)}
-                      disabled={item.claimableReward <= 0}
-                      className="px-3 py-1.5 rounded-lg bg-[#10B981]/20 border border-[#10B981]/40 text-[#10B981] text-xs font-semibold hover:bg-[#10B981]/30 disabled:opacity-40 transition-colors"
+                  <button
+                    onClick={handleStake}
+                    disabled={isSubmitting || !envConfig.featureFlags.isStakingEnabled}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#FFD400] via-[#FF7A00] to-[#FF304F] text-black font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-98 transition-all shadow-[0_0_20px_rgba(255,212,0,0.3)]"
+                  >
+                    {isSubmitting ? 'Staking & Locking Tokens on Sequencer...' : user ? 'Confirm Staking Position' : 'Connect Wallet to Stake'}
+                  </button>
+                </div>
+              ),
+            },
+            {
+              id: 'stake_positions',
+              title: `Your Active Staking Positions (${stakes.length})`,
+              subtitle: 'Live BFT sequencer yield accrual & instantaneous claim pipeline',
+              neonColor: 'green',
+              icon: <Award className="w-4 h-4 text-[#10B981]" />,
+              content: (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                    <span className="text-xs text-gray-400 font-mono">Position Vault Breakdown</span>
+                    <button 
+                      onClick={() => setActiveSubTab('history')} 
+                      className="text-xs text-[#00A8FF] hover:underline font-mono flex items-center gap-1"
                     >
-                      Claim
+                      <span>View Full History</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
+                  {stakes.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-4 rounded-xl bg-[#070B12] border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white">{item.tierName}</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
+                            {item.aprPercent}% APR
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-gray-400 font-mono mt-1">
+                          Deposited: <span className="text-white font-semibold">{item.amount.toLocaleString()} GXQ</span> • Staked on {new Date(item.startDate).toLocaleDateString()}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 self-end sm:self-auto">
+                        <div className="text-right">
+                          <div className="text-[10px] text-gray-400 uppercase font-mono">Unclaimed Reward</div>
+                          <div className="text-xs font-bold font-mono text-[#10B981]">+{item.claimableReward.toFixed(4)} GXQ</div>
+                        </div>
+
+                        <button
+                          onClick={() => handleClaimReward(item.id)}
+                          disabled={item.claimableReward <= 0}
+                          className="px-3 py-1.5 rounded-lg bg-[#10B981]/20 border border-[#10B981]/40 text-[#10B981] text-xs font-semibold hover:bg-[#10B981]/30 disabled:opacity-40 transition-colors"
+                        >
+                          Claim
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </GlassCard>
-        </>
+              ),
+            },
+            {
+              id: 'stake_metrics',
+              title: 'Global Staking Metrics & Accrued Yield',
+              subtitle: 'Active Staked, Real-time block yield & Lifetime rewards on-chain verified',
+              neonColor: 'blue',
+              icon: <ShieldCheck className="w-4 h-4 text-[#00A8FF]" />,
+              content: (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-xl bg-black/40 border border-white/10">
+                    <div className="text-xs text-gray-400 mb-1 flex items-center justify-between">
+                      <span>Your Active Staked</span>
+                      <span className="text-[10px] text-[#00A8FF] font-mono">BFT Sequencer</span>
+                    </div>
+                    <div className="text-xl font-black font-mono text-white">
+                      {totalStaked.toLocaleString()} <span className="text-xs text-[#00A8FF]">GXQ</span>
+                    </div>
+                    <div className="text-[10px] text-gray-500 font-mono mt-1">
+                      ≈ ${(totalStaked * 1.482).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-black/40 border border-white/10">
+                    <div className="text-xs text-gray-400 mb-1 flex items-center justify-between">
+                      <span>Accruing Rewards</span>
+                      <span className="text-[10px] text-[#10B981] font-mono">Real-Time</span>
+                    </div>
+                    <div className="text-xl font-black font-mono text-[#10B981]">
+                      +{totalRewards.toFixed(4)} <span className="text-xs">GXQ</span>
+                    </div>
+                    <div className="text-[10px] text-gray-500 font-mono mt-1">Accruing every block (3.2s)</div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-black/40 border border-white/10">
+                    <div className="text-xs text-gray-400 mb-1 flex items-center justify-between">
+                      <span>Lifetime Claimed</span>
+                      <span className="text-[10px] text-purple-400 font-mono">On-Chain</span>
+                    </div>
+                    <div className="text-xl font-black font-mono text-purple-400">
+                      +{historyMetrics.totalRewardsClaimed.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-xs">GXQ</span>
+                    </div>
+                    <div className="text-[10px] text-gray-500 font-mono mt-1">{historyMetrics.count} transactions</div>
+                  </div>
+                </div>
+              ),
+            },
+          ]}
+          defaultOrder={['stake_form', 'stake_positions', 'stake_metrics']}
+        />
       )}
 
       {/* SUB-VIEW 2: STAKE HISTORY DASHBOARD (Using explorerApi Data) */}

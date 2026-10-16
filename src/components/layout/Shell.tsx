@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, 
   TrendingUp, 
@@ -30,8 +30,16 @@ import {
   Zap,
   Activity,
   Layers,
-  CheckCircle2
+  CheckCircle2,
+  GripVertical,
+  Star,
+  SlidersHorizontal,
+  ChevronUp,
+  Pin,
+  Key,
+  Move
 } from 'lucide-react';
+import { crossTabSync } from '../../services/crossTabSync';
 import { ENVIRONMENTS, GXQEnvironment } from '../../config/environments';
 import { SmartWalletUser } from '../../services/smartWallet';
 import { StatusBadge } from '../common/StatusBadge';
@@ -78,12 +86,36 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   highlight?: boolean;
   badge?: string;
+  category: string;
+  color: 'blue' | 'purple' | 'orange' | 'green' | 'yellow' | 'red';
 }
 
-interface NavCategory {
-  title: string;
-  items: NavItem[];
-}
+const RAW_NAV_ITEMS: NavItem[] = [
+  // Core Protocol
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard, category: 'Core Protocol', color: 'blue' },
+  { id: 'markets', label: 'Live Markets', icon: TrendingUp, category: 'Core Protocol', color: 'green' },
+  { id: 'swap', label: 'DEX Swap', icon: ArrowLeftRight, category: 'Core Protocol', color: 'orange' },
+  { id: 'stake', label: 'Staking Vault', icon: Coins, category: 'Core Protocol', color: 'yellow' },
+  { id: 'launchpad', label: 'Token Launchpad', icon: Rocket, badge: 'NEW', category: 'Core Protocol', color: 'purple' },
+  { id: 'bridge', label: 'Multichain Bridge', icon: Share2, category: 'Core Protocol', color: 'blue' },
+  { id: 'explorer', label: 'Block Explorer', icon: Compass, category: 'Core Protocol', color: 'green' },
+  
+  // Enterprise Architecture
+  { id: 'architecture', label: 'Architecture Matrix', icon: Cpu, category: 'Enterprise Architecture', color: 'blue' },
+  { id: 'enterprise', label: 'Enterprise Edition', icon: Building2, category: 'Enterprise Architecture', color: 'purple' },
+  { id: 'whitepaper', label: 'Technical Whitepaper', icon: FileText, category: 'Enterprise Architecture', color: 'yellow' },
+  { id: 'brand', label: 'Brand & Logo Guide', icon: Palette, category: 'Enterprise Architecture', color: 'orange' },
+  
+  // Intelligence & Audits
+  { id: 'portfolio', label: 'Portfolio Analytics', icon: PieChart, category: 'Intelligence & Audits', color: 'green' },
+  { id: 'ai', label: 'AI Intelligence', icon: Sparkles, category: 'Intelligence & Audits', color: 'purple' },
+  { id: 'cypress', label: 'Cypress E2E Tests', icon: Terminal, category: 'Intelligence & Audits', color: 'blue' },
+  { id: 'security', label: 'Security Center', icon: ShieldCheck, category: 'Intelligence & Audits', color: 'red' },
+  
+  // Governance & Docs
+  { id: 'admin', label: 'Admin RBAC', icon: ShieldAlert, highlight: true, badge: 'SUPER', category: 'Governance & Docs', color: 'red' },
+  { id: 'guide', label: 'User Guide & Docs', icon: BookOpen, category: 'Governance & Docs', color: 'blue' },
+];
 
 export const Shell: React.FC<ShellProps> = ({
   activeTab,
@@ -107,6 +139,156 @@ export const Shell: React.FC<ShellProps> = ({
 
   const [envDropdownOpen, setEnvDropdownOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isReorderingNav, setIsReorderingNav] = useState(false);
+
+  // Cross-tab synced favorites
+  const [favoriteTabs, setFavoriteTabs] = useState<NavigationTab[]>(() => {
+    try {
+      const prefs = crossTabSync.getPreferences();
+      if (prefs.favoriteTabs && prefs.favoriteTabs.length > 0) {
+        return prefs.favoriteTabs as NavigationTab[];
+      }
+      const stored = localStorage.getItem('gxq_shell_nav_favorites');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return ['overview', 'markets', 'swap', 'launchpad', 'portfolio', 'security'];
+  });
+
+  // Custom Nav Items Order with persistence
+  const [orderedItemIds, setOrderedItemIds] = useState<NavigationTab[]>(() => {
+    try {
+      const stored = localStorage.getItem('gxq_shell_master_nav_order');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const allKnown = RAW_NAV_ITEMS.map(i => i.id);
+          const valid = parsed.filter(id => allKnown.includes(id));
+          allKnown.forEach(id => {
+            if (!valid.includes(id)) valid.push(id);
+          });
+          return valid;
+        }
+      }
+    } catch {}
+    return RAW_NAV_ITEMS.map(i => i.id);
+  });
+
+  // Drag-and-drop state for menu tab navigation
+  const [draggedTabId, setDraggedTabId] = useState<NavigationTab | null>(null);
+  const [dropTargetTabId, setDropTargetTabId] = useState<NavigationTab | null>(null);
+  const dropTargetTabRef = useRef<NavigationTab | null>(null);
+  dropTargetTabRef.current = dropTargetTabId;
+
+  // Listen to crossTabSync updates
+  useEffect(() => {
+    const unsub = crossTabSync.subscribe((prefs) => {
+      if (prefs.favoriteTabs) {
+        setFavoriteTabs(prefs.favoriteTabs as NavigationTab[]);
+      }
+      if (prefs.navOrder && prefs.navOrder.length > 0) {
+        setOrderedItemIds(prefs.navOrder as NavigationTab[]);
+      }
+    });
+    return unsub;
+  }, []);
+
+  const saveFavorites = (newFavs: NavigationTab[]) => {
+    setFavoriteTabs(newFavs);
+    try {
+      localStorage.setItem('gxq_shell_nav_favorites', JSON.stringify(newFavs));
+    } catch {}
+    crossTabSync.updatePreferences({ favoriteTabs: newFavs });
+  };
+
+  const saveNavOrder = (newOrder: NavigationTab[]) => {
+    setOrderedItemIds(newOrder);
+    try {
+      localStorage.setItem('gxq_shell_master_nav_order', JSON.stringify(newOrder));
+    } catch {}
+    crossTabSync.updatePreferences({ navOrder: newOrder });
+  };
+
+  const toggleFavorite = (tabId: NavigationTab, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = favoriteTabs.includes(tabId) 
+      ? favoriteTabs.filter(t => t !== tabId) 
+      : [...favoriteTabs, tabId];
+    saveFavorites(next);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+  };
+
+  const moveFavorite = (index: number, direction: 'up' | 'down', e: React.MouseEvent) => {
+    e.stopPropagation();
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= favoriteTabs.length) return;
+    const next = [...favoriteTabs];
+    const [removed] = next.splice(index, 1);
+    next.splice(targetIdx, 0, removed);
+    saveFavorites(next);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(15);
+  };
+
+  const moveMasterItem = (index: number, direction: 'up' | 'down', e: React.MouseEvent) => {
+    e.stopPropagation();
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= orderedItemIds.length) return;
+    const next = [...orderedItemIds];
+    const [removed] = next.splice(index, 1);
+    next.splice(targetIdx, 0, removed);
+    saveNavOrder(next);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(15);
+  };
+
+  // Touch & Pointer Drag for Navigation Tabs
+  const handlePointerDownNav = (e: React.PointerEvent, id: NavigationTab) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    e.preventDefault();
+
+    setDraggedTabId(id);
+    setDropTargetTabId(null);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+
+    const onPointerMove = (evt: PointerEvent) => {
+      const el = document.elementFromPoint(evt.clientX, evt.clientY);
+      const targetEl = el?.closest('[data-nav-id]') as HTMLElement | null;
+      if (targetEl) {
+        const targetId = targetEl.getAttribute('data-nav-id') as NavigationTab;
+        if (targetId && targetId !== id) {
+          setDropTargetTabId(targetId);
+        }
+      }
+    };
+
+    const onPointerUp = () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+
+      const target = dropTargetTabRef.current;
+      if (target && target !== id) {
+        setOrderedItemIds(prev => {
+          const fromIdx = prev.indexOf(id);
+          const toIdx = prev.indexOf(target);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const next = [...prev];
+            next.splice(fromIdx, 1);
+            next.splice(toIdx, 0, id);
+            saveNavOrder(next);
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([15, 30, 15]);
+            return next;
+          }
+          return prev;
+        });
+      }
+
+      setDraggedTabId(null);
+      setDropTargetTabId(null);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+  };
 
   const envConfig = ENVIRONMENTS[currentEnv];
 
@@ -119,53 +301,31 @@ export const Shell: React.FC<ShellProps> = ({
     }
   };
 
-  const navCategories: NavCategory[] = [
-    {
-      title: 'Core Protocol',
-      items: [
-        { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-        { id: 'markets', label: 'Live Markets', icon: TrendingUp },
-        { id: 'swap', label: 'DEX Swap', icon: ArrowLeftRight },
-        { id: 'stake', label: 'Staking Vault', icon: Coins },
-        { id: 'launchpad', label: 'Token Launchpad', icon: Rocket, badge: 'NEW' },
-        { id: 'bridge', label: 'Multichain Bridge', icon: Share2 },
-        { id: 'explorer', label: 'Block Explorer', icon: Compass },
-      ],
-    },
-    {
-      title: 'Enterprise Architecture',
-      items: [
-        { id: 'architecture', label: 'Architecture Matrix', icon: Cpu },
-        { id: 'enterprise', label: 'Enterprise Edition', icon: Building2 },
-        { id: 'whitepaper', label: 'Technical Whitepaper', icon: FileText },
-        { id: 'brand', label: 'Brand & Logo Guide', icon: Palette },
-      ],
-    },
-    {
-      title: 'Intelligence & Audits',
-      items: [
-        { id: 'portfolio', label: 'Portfolio Analytics', icon: PieChart },
-        { id: 'ai', label: 'AI Intelligence', icon: Sparkles },
-        { id: 'cypress', label: 'Cypress E2E Tests', icon: Terminal },
-        { id: 'security', label: 'Security Center', icon: ShieldCheck },
-      ],
-    },
-    {
-      title: 'Governance & Docs',
-      items: [
-        ...(isAdmin
-          ? [{ id: 'admin' as NavigationTab, label: 'Admin RBAC', icon: ShieldAlert, highlight: true, badge: 'SUPER' }]
-          : []),
-        { id: 'guide', label: 'User Guide & Docs', icon: BookOpen },
-      ],
-    },
-  ];
+  // Filter items according to permissions
+  const availableItems = RAW_NAV_ITEMS.filter(item => {
+    if (item.id === 'admin' && !isAdmin) return false;
+    return true;
+  });
 
-  // Renders the Menu Slider's Top Control Hub (Wallet + Network + Faucet + Admin)
+  // Sort available items by orderedItemIds
+  const sortedNavItems = [...availableItems].sort((a, b) => {
+    const idxA = orderedItemIds.indexOf(a.id);
+    const idxB = orderedItemIds.indexOf(b.id);
+    return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
+  });
+
+  // Group into categories based on original items
+  const categoriesMap: { [cat: string]: NavItem[] } = {};
+  sortedNavItems.forEach(item => {
+    if (!categoriesMap[item.category]) categoriesMap[item.category] = [];
+    categoriesMap[item.category].push(item);
+  });
+
+  // Control Hub top header
   const renderMenuSliderTopHeader = () => (
     <div className="space-y-3 pb-3 mb-3 border-b border-white/10 shrink-0">
       
-      {/* 1. Brand Banner in Menu Slider */}
+      {/* Brand Banner */}
       <div className="flex items-center justify-between">
         <div 
           className="flex items-center gap-2.5 cursor-pointer group" 
@@ -175,7 +335,7 @@ export const Shell: React.FC<ShellProps> = ({
           }} 
           title="GXQ Network Overview"
         >
-          <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-[#00A8FF] via-[#7928CA] to-[#FF7A00] p-0.5 shadow-[0_0_12px_rgba(0,168,255,0.4)] group-hover:scale-105 transition-transform">
+          <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-[#00A8FF] via-[#7928CA] to-[#FF7A00] p-0.5 shadow-[0_0_15px_rgba(0,168,255,0.4)] group-hover:scale-105 transition-transform">
             <div className="w-full h-full bg-[#070B12] rounded-[10px] flex items-center justify-center">
               <span className="font-mono font-black text-white text-xs tracking-tighter">GXQ</span>
             </div>
@@ -185,18 +345,18 @@ export const Shell: React.FC<ShellProps> = ({
             <div className="font-mono font-bold text-xs tracking-tight text-white flex items-center gap-1.5">
               <span>GXQ NETWORK</span>
               <span className="text-[9px] px-1 py-0.2 rounded bg-[#00A8FF]/20 text-[#00A8FF] font-mono border border-[#00A8FF]/40">
-                V3.0
+                V3.0 PRO
               </span>
             </div>
             <div className="text-[10px] text-gray-500 font-mono flex items-center gap-1">
-              <span>Command Menu</span>
+              <span>Command Hub</span>
               <span className="text-gray-600">•</span>
               <span className="text-emerald-400">Online</span>
             </div>
           </div>
         </div>
 
-        {/* Mobile close button if inside mobile drawer */}
+        {/* Mobile close button */}
         <button
           onClick={() => setIsMobileOpen(false)}
           className="lg:hidden p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
@@ -206,10 +366,9 @@ export const Shell: React.FC<ShellProps> = ({
         </button>
       </div>
 
-      {/* 2. Connected Smart Wallet Card or Connect Wallet CTA */}
+      {/* Connected Smart Wallet Card */}
       {currentUser ? (
-        <div className="p-3 rounded-2xl bg-gradient-to-b from-[#00A8FF]/10 via-[#070B12] to-[#070B12] border border-[#00A8FF]/30 shadow-[0_4px_20px_rgba(0,168,255,0.12)] relative overflow-hidden group">
-          {/* Subtle Ambient Radial Glow */}
+        <div className="p-3 rounded-2xl bg-gradient-to-b from-[#00A8FF]/10 via-[#070B12] to-[#070B12] border border-[#00A8FF]/30 shadow-[0_4px_20px_rgba(0,168,255,0.15)] relative overflow-hidden group glow-card-blue">
           <div className="absolute -top-8 -right-8 w-24 h-24 bg-[#00A8FF]/15 rounded-full blur-xl pointer-events-none" />
 
           {/* User Profile Bar */}
@@ -268,7 +427,6 @@ export const Shell: React.FC<ShellProps> = ({
             </button>
           </div>
 
-          {/* AA Architecture & Account Type */}
           <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
             <span className="flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
@@ -293,7 +451,7 @@ export const Shell: React.FC<ShellProps> = ({
         </div>
       )}
 
-      {/* 3. Network Environment Selector */}
+      {/* Network Environment Selector */}
       <div className="relative">
         <button
           onClick={() => setEnvDropdownOpen(!envDropdownOpen)}
@@ -356,7 +514,7 @@ export const Shell: React.FC<ShellProps> = ({
         )}
       </div>
 
-      {/* 4. Quick Actions: Faucet & Admin Buttons */}
+      {/* Quick Actions: Faucet & Admin */}
       <div className="grid grid-cols-2 gap-2">
         {envConfig.featureFlags.isFaucetEnabled ? (
           <button
@@ -402,48 +560,190 @@ export const Shell: React.FC<ShellProps> = ({
     </div>
   );
 
-  // Renders the Navigation Items List categorized
+  // Renders the Navigation Items List with Touch Drag-and-Drop and Up/Down controls
   const renderNavList = () => (
-    <div className="space-y-4 overflow-y-auto flex-1 pr-1 custom-scrollbar">
-      {navCategories.map((cat, idx) => (
-        <div key={idx} className="space-y-1">
-          <div className="text-[10px] font-mono uppercase text-gray-500 font-semibold px-2 tracking-wider flex items-center justify-between">
-            <span>{cat.title}</span>
-            <span className="text-gray-600 text-[9px]">{cat.items.length}</span>
+    <div className="space-y-3 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+      
+      {/* 1. Pinned Favorites Quick Launch */}
+      {favoriteTabs.length > 0 && (
+        <div className="p-2.5 rounded-2xl bg-black/40 border border-[#00A8FF]/30 space-y-2 glow-card-blue relative">
+          <div className="h-[2px] w-full flash-line-blue rounded-t-xl mb-1" />
+          
+          <div className="flex items-center justify-between text-[10px] font-mono text-gray-400">
+            <span className="flex items-center gap-1 text-[#00A8FF] font-bold">
+              <Star className="w-3 h-3 fill-[#00A8FF]" />
+              <span>PINNED FAVORITES ({favoriteTabs.length})</span>
+            </span>
+            <button
+              onClick={() => setIsReorderingNav(!isReorderingNav)}
+              className={`px-2 py-0.5 rounded-md font-mono text-[9px] font-bold flex items-center gap-1 transition-all ${
+                isReorderingNav 
+                  ? 'bg-[#00A8FF] text-black shadow-[0_0_8px_#00A8FF]' 
+                  : 'bg-white/5 hover:bg-white/10 text-gray-300'
+              }`}
+              title="Customize Navigation"
+            >
+              <SlidersHorizontal className="w-2.5 h-2.5" />
+              <span>{isReorderingNav ? 'Done' : 'Reorder'}</span>
+            </button>
           </div>
-          <div className="space-y-0.5">
-            {cat.items.map((item) => {
+
+          <div className="flex flex-wrap gap-1.5">
+            {favoriteTabs.map((favId, fIdx) => {
+              const item = RAW_NAV_ITEMS.find(i => i.id === favId);
+              if (!item) return null;
+              const Icon = item.icon;
+              const isActive = activeTab === favId;
+              return (
+                <div key={favId} className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => {
+                      onSelectTab(favId);
+                      setIsMobileOpen(false);
+                      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+                    }}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold flex items-center gap-1.5 transition-all ${
+                      isActive
+                        ? 'bg-[#00A8FF] text-black shadow-[0_0_12px_#00A8FF]'
+                        : 'bg-white/5 hover:bg-white/10 text-gray-300 border border-white/5'
+                    }`}
+                  >
+                    <Icon className="w-3 h-3" />
+                    <span>{item.label}</span>
+                  </button>
+
+                  {/* Reordering bump buttons for favorites when reorder mode active */}
+                  {isReorderingNav && (
+                    <div className="flex flex-col gap-0.5 ml-0.5">
+                      <button
+                        onClick={(e) => moveFavorite(fIdx, 'up', e)}
+                        disabled={fIdx === 0}
+                        className="p-0.5 rounded bg-white/10 hover:bg-[#00A8FF]/30 text-gray-300 hover:text-white disabled:opacity-20"
+                        title="Move Left/Up"
+                      >
+                        <ChevronUp className="w-2.5 h-2.5" />
+                      </button>
+                      <button
+                        onClick={(e) => moveFavorite(fIdx, 'down', e)}
+                        disabled={fIdx === favoriteTabs.length - 1}
+                        className="p-0.5 rounded bg-white/10 hover:bg-[#00A8FF]/30 text-gray-300 hover:text-white disabled:opacity-20"
+                        title="Move Right/Down"
+                      >
+                        <ChevronDown className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 2. Categorized Navigation Groups with Touch Drag-and-Drop */}
+      {Object.entries(categoriesMap).map(([categoryTitle, items], catIdx) => (
+        <div key={categoryTitle} className="space-y-1">
+          <div className="text-[10px] font-mono uppercase text-gray-400 font-bold px-2 tracking-wider flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                catIdx === 0 ? 'bg-[#00A8FF]' : catIdx === 1 ? 'bg-[#A855F7]' : catIdx === 2 ? 'bg-[#10B981]' : 'bg-[#FF7A00]'
+              }`} />
+              <span>{categoryTitle}</span>
+            </span>
+            <span className="text-gray-600 text-[9px]">{items.length}</span>
+          </div>
+
+          <div className="space-y-1">
+            {items.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
+              const isFav = favoriteTabs.includes(item.id);
+              const isDragged = draggedTabId === item.id;
+              const isDropTarget = dropTargetTabId === item.id;
+              const globalIdx = orderedItemIds.indexOf(item.id);
+
               return (
-                <button
+                <div
                   key={item.id}
-                  onClick={() => {
-                    onSelectTab(item.id);
-                    setIsMobileOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  data-nav-id={item.id}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all group relative ${
+                    isDropTarget ? 'border-2 border-[#00A8FF] shadow-[0_0_15px_rgba(0,168,255,0.4)]' : ''
+                  } ${
+                    isDragged ? 'opacity-40 scale-98 bg-white/10' : ''
+                  } ${
                     isActive
                       ? item.highlight
-                        ? 'bg-gradient-to-r from-[#FF7A00]/25 to-[#FF304F]/25 text-[#FFD400] border border-[#FF7A00]/50 shadow-[0_0_15px_rgba(255,122,0,0.25)]'
-                        : 'bg-[#00A8FF]/15 text-[#00A8FF] border border-[#00A8FF]/30 shadow-[0_0_15px_rgba(0,168,255,0.15)]'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                        ? 'bg-gradient-to-r from-[#FF7A00]/25 to-[#FF304F]/25 text-[#FFD400] border border-[#FF7A00]/50 shadow-[0_0_15px_rgba(255,122,0,0.25)] glow-card-orange'
+                        : 'bg-[#00A8FF]/15 text-[#00A8FF] border border-[#00A8FF]/40 shadow-[0_0_15px_rgba(0,168,255,0.2)] glow-card-blue'
+                      : 'text-gray-300 hover:text-white hover:bg-white/5 border border-transparent'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 truncate">
+                  {/* Left Grip Handle for Touch Drag-and-Drop */}
+                  <div
+                    onPointerDown={(e) => handlePointerDownNav(e, item.id)}
+                    className="p-1 -ml-1 text-gray-500 hover:text-white cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
+                    title="Touch & Drag to reorder menu tab"
+                  >
+                    <GripVertical className="w-3.5 h-3.5" />
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      onSelectTab(item.id);
+                      setIsMobileOpen(false);
+                      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+                    }}
+                    className="flex items-center gap-2 truncate flex-1 text-left min-w-0"
+                  >
                     <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-current' : 'text-gray-400'}`} />
                     <span className="truncate">{item.label}</span>
+                  </button>
+
+                  {/* Actions: Reorder Bump Buttons + Favorite Pin + Badge */}
+                  <div className="flex items-center gap-1 shrink-0 ml-1">
+                    {isReorderingNav && (
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          onClick={(e) => moveMasterItem(globalIdx, 'up', e)}
+                          disabled={globalIdx === 0}
+                          className="p-1 rounded bg-white/5 hover:bg-[#00A8FF]/20 text-gray-400 hover:text-white disabled:opacity-20"
+                          title="Move Up"
+                        >
+                          <ChevronUp className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={(e) => moveMasterItem(globalIdx, 'down', e)}
+                          disabled={globalIdx === orderedItemIds.length - 1}
+                          className="p-1 rounded bg-white/5 hover:bg-[#00A8FF]/20 text-gray-400 hover:text-white disabled:opacity-20"
+                          title="Move Down"
+                        >
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Favorite Pin Button */}
+                    <button
+                      onClick={(e) => toggleFavorite(item.id, e)}
+                      className={`p-1 rounded transition-colors ${
+                        isFav ? 'text-[#00A8FF]' : 'text-gray-600 hover:text-gray-400 opacity-60 sm:opacity-0 group-hover:opacity-100'
+                      }`}
+                      title={isFav ? 'Unpin favorite' : 'Pin to favorites'}
+                    >
+                      <Star className={`w-3 h-3 ${isFav ? 'fill-[#00A8FF]' : ''}`} />
+                    </button>
+
+                    {item.badge && (
+                      <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded uppercase border shrink-0 ${
+                        item.highlight 
+                          ? 'bg-[#FF7A00]/30 text-[#FF7A00] border-[#FF7A00]/50' 
+                          : 'bg-[#00A8FF]/20 text-[#00A8FF] border-[#00A8FF]/40'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
                   </div>
-                  {item.badge && (
-                    <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded uppercase border shrink-0 ${
-                      item.highlight 
-                        ? 'bg-[#FF7A00]/30 text-[#FF7A00] border-[#FF7A00]/50' 
-                        : 'bg-[#00A8FF]/20 text-[#00A8FF] border-[#00A8FF]/40'
-                    }`}>
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
+                </div>
               );
             })}
           </div>
@@ -452,7 +752,7 @@ export const Shell: React.FC<ShellProps> = ({
     </div>
   );
 
-  // Renders the Menu Slider's Bottom Status card
+  // Bottom Status card
   const renderMenuSliderFooter = () => (
     <div className="mt-auto pt-3 border-t border-white/10 shrink-0">
       <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 space-y-1.5">
@@ -487,17 +787,25 @@ export const Shell: React.FC<ShellProps> = ({
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 lg:p-8 min-w-0 pb-20 lg:pb-8">
+        <main className="flex-1 p-4 lg:p-8 min-w-0 pb-24 lg:pb-8">
           {children}
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar (Minimalist quick triggers) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#070B12]/95 backdrop-blur-xl border-t border-white/10 px-2 py-1.5 flex items-center justify-around">
+      {/* Mobile Bottom Navigation Bar (Cyber-futuristic with Glowing Halos & Flash Lines) */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#070B12]/95 backdrop-blur-2xl border-t border-white/15 px-2 py-1.5 flex items-center justify-around mobile-bottom-appbar shadow-[0_-5px_25px_rgba(0,168,255,0.15)]">
+        {/* Top Glowing Flash Line */}
+        <div className="absolute -top-[2px] left-0 right-0 h-[3px] flash-line-blue opacity-100" />
+
         <button
-          onClick={() => onSelectTab('overview')}
-          className={`flex flex-col items-center gap-1 py-1 px-2 rounded-lg text-[10px] ${
-            activeTab === 'overview' ? 'text-[#00A8FF] font-bold' : 'text-gray-400'
+          onClick={() => {
+            onSelectTab('overview');
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+          }}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] transition-all ${
+            activeTab === 'overview'
+              ? 'text-[#00A8FF] font-bold bg-[#00A8FF]/20 shadow-[0_0_15px_rgba(0,168,255,0.5)] border border-[#00A8FF]/50 scale-105 glow-card-blue'
+              : 'text-gray-400 hover:text-white'
           }`}
         >
           <LayoutDashboard className="w-4 h-4" />
@@ -505,9 +813,29 @@ export const Shell: React.FC<ShellProps> = ({
         </button>
 
         <button
-          onClick={() => onSelectTab('swap')}
-          className={`flex flex-col items-center gap-1 py-1 px-2 rounded-lg text-[10px] ${
-            activeTab === 'swap' ? 'text-[#00A8FF] font-bold' : 'text-gray-400'
+          onClick={() => {
+            onSelectTab('markets');
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+          }}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] transition-all ${
+            activeTab === 'markets'
+              ? 'text-[#10B981] font-bold bg-[#10B981]/20 shadow-[0_0_15px_rgba(16,185,129,0.5)] border border-[#10B981]/50 scale-105 glow-card-green'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <TrendingUp className="w-4 h-4" />
+          <span>Markets</span>
+        </button>
+
+        <button
+          onClick={() => {
+            onSelectTab('swap');
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+          }}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] transition-all ${
+            activeTab === 'swap'
+              ? 'text-[#FF7A00] font-bold bg-[#FF7A00]/20 shadow-[0_0_15px_rgba(255,122,0,0.5)] border border-[#FF7A00]/50 scale-105 glow-card-orange'
+              : 'text-gray-400 hover:text-white'
           }`}
         >
           <ArrowLeftRight className="w-4 h-4" />
@@ -515,9 +843,14 @@ export const Shell: React.FC<ShellProps> = ({
         </button>
 
         <button
-          onClick={() => onSelectTab('launchpad')}
-          className={`flex flex-col items-center gap-1 py-1 px-2 rounded-lg text-[10px] ${
-            activeTab === 'launchpad' ? 'text-[#00A8FF] font-bold' : 'text-gray-400'
+          onClick={() => {
+            onSelectTab('launchpad');
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+          }}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] transition-all ${
+            activeTab === 'launchpad'
+              ? 'text-[#A855F7] font-bold bg-[#A855F7]/20 shadow-[0_0_15px_rgba(168,85,247,0.5)] border border-[#A855F7]/50 scale-105 glow-card-purple'
+              : 'text-gray-400 hover:text-white'
           }`}
         >
           <Rocket className="w-4 h-4" />
@@ -525,35 +858,52 @@ export const Shell: React.FC<ShellProps> = ({
         </button>
 
         <button
-          onClick={() => onSelectTab('explorer')}
-          className={`flex flex-col items-center gap-1 py-1 px-2 rounded-lg text-[10px] ${
-            activeTab === 'explorer' ? 'text-[#00A8FF] font-bold' : 'text-gray-400'
+          onClick={() => {
+            onSelectTab('portfolio');
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+          }}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] transition-all ${
+            activeTab === 'portfolio'
+              ? 'text-[#FFD400] font-bold bg-[#FFD400]/20 shadow-[0_0_15px_rgba(255,212,0,0.5)] border border-[#FFD400]/50 scale-105 glow-card-yellow'
+              : 'text-gray-400 hover:text-white'
           }`}
         >
-          <Compass className="w-4 h-4" />
-          <span>Explorer</span>
+          <PieChart className="w-4 h-4" />
+          <span>Portfolio</span>
         </button>
 
         <button
-          onClick={() => setIsMobileOpen(true)}
-          className="flex flex-col items-center gap-1 py-1 px-2 rounded-lg text-[10px] text-gray-300 hover:text-white"
+          onClick={() => {
+            setIsMobileOpen(true);
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+          }}
+          className="flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] text-gray-300 hover:text-white active:scale-95 transition-all"
         >
-          <Menu className="w-4 h-4 text-[#00A8FF]" />
-          <span>Menu Slider</span>
+          <div className="relative">
+            <Menu className="w-4 h-4 text-[#00A8FF]" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#FF7A00] animate-ping" />
+          </div>
+          <span>Menu</span>
         </button>
       </nav>
 
-      {/* Mobile Slide-Over Menu Slider (Left Slide Drawer) */}
+      {/* Mobile Slide-Over Menu Slider (Professional Enterprise Execution Core Drawer) */}
       {isMobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex animate-fadeIn">
-          {/* Backdrop */}
+          {/* Backdrop with High Blur */}
           <div 
-            className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+            className="fixed inset-0 bg-black/85 backdrop-blur-xl transition-opacity duration-300"
             onClick={() => setIsMobileOpen(false)}
           />
 
           {/* Slide-out Drawer Panel */}
-          <div className="relative w-80 max-w-[85vw] h-full bg-[#070B12]/98 border-r border-white/15 backdrop-blur-2xl flex flex-col p-4 shadow-2xl z-10 animate-slideInLeft overflow-hidden">
+          <div className="relative w-84 max-w-[88vw] h-full bg-[#070B12]/98 border-r border-[#00A8FF]/30 backdrop-blur-3xl flex flex-col p-5 shadow-[0_0_50px_rgba(0,168,255,0.25)] z-10 animate-slideInLeft overflow-hidden">
+            {/* Top Glowing Flash Line */}
+            <div className="absolute top-0 left-0 right-0 h-[3px] flash-line-blue opacity-100 z-20" />
+            
+            {/* Mobile Pull Bar Indicator */}
+            <div className="w-12 h-1 rounded-full bg-white/30 mx-auto mb-3 shrink-0" />
+            
             {renderMenuSliderTopHeader()}
             {renderNavList()}
             {renderMenuSliderFooter()}

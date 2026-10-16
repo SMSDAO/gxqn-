@@ -5,7 +5,14 @@ export const useLocalStorageSync = (syncHandlers: Record<string, (newValue: any)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key && syncHandlers[e.key]) {
         try {
-          const newValue = e.newValue ? JSON.parse(e.newValue) : null;
+          let newValue = null;
+          if (e.newValue) {
+            try {
+              newValue = JSON.parse(e.newValue);
+            } catch {
+              newValue = e.newValue;
+            }
+          }
           syncHandlers[e.key](newValue);
         } catch (error) {
           console.error(`Error syncing local storage for ${e.key}:`, error);

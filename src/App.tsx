@@ -13,6 +13,7 @@ import { explorerApi } from './services/explorerApi';
 import { alertService } from './services/alertService';
 import { telemetry } from './services/telemetry';
 import { wsService } from './services/websocketService';
+import { crossTabSync } from './services/crossTabSync';
 
 import { Header } from './components/layout/Header';
 import { Shell, NavigationTab } from './components/layout/Shell';
@@ -153,6 +154,18 @@ export default function App() {
       triggerFlash('AI_INSIGHT_FLASH');
     });
 
+    // Subscribe to Cross-Tab Session Synchronization
+    const unsubCrossTab = crossTabSync.subscribe((prefs) => {
+      if (prefs.activeEnv && prefs.activeEnv !== currentEnv && ENVIRONMENTS[prefs.activeEnv as GXQEnvironment]) {
+        setCurrentEnv(prefs.activeEnv as GXQEnvironment);
+        setLiveNotification({
+          title: '⚡ Cross-Tab Session Synchronized',
+          message: `Active environment synchronized to ${ENVIRONMENTS[prefs.activeEnv as GXQEnvironment].name} across browser sessions.`,
+        });
+        triggerFlash('BLUE_FLASH');
+      }
+    });
+
     telemetry.log({
       eventType: 'page_view',
       network: currentEnv,
@@ -162,13 +175,15 @@ export default function App() {
     return () => {
       unsubMarket();
       unsubVolatility();
+      unsubCrossTab();
       marketProvider.disconnect();
       wsService.disconnect();
     };
-  }, []);
+  }, [currentEnv]);
 
   const handleSelectEnv = (env: GXQEnvironment) => {
     setCurrentEnv(env);
+    crossTabSync.updatePreferences({ activeEnv: env });
     errorMonitoring.setEnvironment(env);
     errorMonitoring.addBreadcrumb({
       category: 'navigation',
@@ -269,11 +284,12 @@ export default function App() {
   const isAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'AUDITOR' || currentUser?.role === 'OPERATOR';
 
   let flashBorder = '';
-  if (flashType === 'BLUE_FLASH') flashBorder = 'animate-flash-blue';
+  if (flashType === 'BLUE_FLASH' || flashType === 'AI_INSIGHT_FLASH') flashBorder = 'animate-flash-blue';
   if (flashType === 'ORANGE_FLASH') flashBorder = 'animate-flash-orange';
-  if (flashType === 'SUCCESS_FLASH') flashBorder = 'animate-flash-green';
+  if (flashType === 'SUCCESS_FLASH' || flashType === 'GREEN_FLASH') flashBorder = 'animate-flash-green';
   if (flashType === 'RED_FLASH') flashBorder = 'animate-flash-red';
-  if (flashType === 'AI_INSIGHT_FLASH') flashBorder = 'animate-flash-blue';
+  if (flashType === 'PURPLE_FLASH') flashBorder = 'animate-flash-purple';
+  if (flashType === 'YELLOW_FLASH') flashBorder = 'animate-flash-yellow';
 
   return (
     <div className={`min-h-screen bg-[#030507] cyber-grid cyber-radial-glow relative transition-colors ${flashBorder}`}>
@@ -338,30 +354,10 @@ export default function App() {
         setMobileMenuOpen={setMobileMenuOpen}
       >
         <ErrorBoundary componentName={`Module_${activeTab}`} fallbackTitle={`${activeTab.toUpperCase()} Module Isolated`}>
-        {activeTab === 'overview' && (
-            <CommandCenter
-              envConfig={envConfig}
-              user={currentUser}
-              markets={markets}
-              topInsight={AI_INSIGHTS[0]}
-              portfolioScore={SCORE_DATABASE.portfolioHealth}
-              onOpenScoreBreakdown={setActiveScoreModal}
-              onNavigate={(t) => setActiveTab(t)}
-              onClaimFaucet={handleClaimFaucet}
-              triggerFlash={triggerFlash}
-            />
-        )}
-
-        {activeTab === 'markets' && (
-          <MarketsModule
-            markets={markets}
-            onNavigateToSwap={() => setActiveTab('swap')}
-          />
-        )}
-
         {activeTokenProfile ? (
           <TokenProfileModule
             tokenSymbol={activeTokenProfile}
+            onClose={() => setActiveTokenProfile(null)}
           />
         ) : (
           <>
@@ -370,12 +366,18 @@ export default function App() {
                 envConfig={envConfig}
                 user={currentUser}
                 markets={markets}
-                onClaimFaucet={handleClaimFaucet}
-                triggerFlash={triggerFlash}
                 topInsight={AI_INSIGHTS[0]}
                 portfolioScore={SCORE_DATABASE.portfolioHealth}
                 onOpenScoreBreakdown={setActiveScoreModal}
                 onNavigate={(tab) => setActiveTab(tab)}
+                onClaimFaucet={handleClaimFaucet}
+                triggerFlash={triggerFlash}
+              />
+            )}
+            {activeTab === 'markets' && (
+              <MarketsModule
+                markets={markets}
+                onNavigateToSwap={() => setActiveTab('swap')}
               />
             )}
             {activeTab === 'swap' && (

@@ -12,6 +12,7 @@
 
 import express, { Request, Response, NextFunction } from 'express';
 import { logger } from '../../../src/services/logger';
+import { telemetryTracing } from '../../../src/services/telemetryTracing';
 import { 
   advancedCache, 
   createCacheMiddleware, 
@@ -98,16 +99,66 @@ export interface ServerErrorLog {
 
 const serverErrors: ServerErrorLog[] = [];
 
-// Request Correlation & Timing Middleware
+// OpenTelemetry Distributed Tracing & Request Correlation Middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
+  const reqStart = Date.now();
   const correlationId = (req.headers['x-correlation-id'] as string) || `srv_corr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-  res.setHeader('X-Correlation-ID', correlationId);
-  res.setHeader('X-Powered-By', 'GXQ Network Core Engine');
   
-  logger.info(`API request: ${req.method} ${req.url}`, {
+  // Extract or generate OpenTelemetry W3C Trace Context
+  let traceId = (req.headers['x-trace-id'] as string) || '';
+  const traceparent = (req.headers['traceparent'] as string) || '';
+  if (traceparent.startsWith('00-')) {
+    const parts = traceparent.split('-');
+    if (parts.length >= 3 && parts[1].length === 32) {
+      traceId = parts[1];
+    }
+  }
+  if (!traceId) {
+    traceId = telemetryTracing.generateTraceId();
+  }
+  const spanId = telemetryTracing.generateSpanId();
+
+  // W3C Trace Context Headers
+  res.setHeader('X-Correlation-ID', correlationId);
+  res.setHeader('X-Trace-ID', traceId);
+  res.setHeader('X-Span-ID', spanId);
+  res.setHeader('traceparent', `00-${traceId}-${spanId}-01`);
+  res.setHeader('X-Powered-By', 'GXQ Network Core Engine (OpenTelemetry-Instrumented)');
+
+  // Contextual Winston Logging
+  logger.info(`HTTP Incoming: ${req.method} ${req.url}`, {
+    service: 'api-gateway',
+    traceId,
+    spanId,
     correlationId,
     method: req.method,
     url: req.url,
+  });
+
+  // Track completion duration and latency
+  res.on('finish', () => {
+    const durationMs = Date.now() - reqStart;
+    const isError = res.statusCode >= 400;
+    
+    if (isError) {
+      logger.warn(`HTTP Response: ${req.method} ${req.url} -> ${res.statusCode} (${durationMs}ms)`, {
+        service: 'api-gateway',
+        traceId,
+        spanId,
+        correlationId,
+        statusCode: res.statusCode,
+        durationMs,
+      });
+    } else {
+      logger.debug(`HTTP Completed: ${req.method} ${req.url} -> ${res.statusCode} (${durationMs}ms)`, {
+        service: 'api-gateway',
+        traceId,
+        spanId,
+        correlationId,
+        statusCode: res.statusCode,
+        durationMs,
+      });
+    }
   });
   
   next();
@@ -413,6 +464,142 @@ app.get('/health', (_req: Request, res: Response) => {
         xfetchEarlyRefreshCount: cacheMetrics.xfetchEarlyRefreshCount,
       },
     },
+  });
+});
+
+// -------------------------------------------------------------
+// OPENTELEMETRY DISTRIBUTED TRACING & STRUCTURED LOGGING APIS
+// -------------------------------------------------------------
+
+/**
+ * GET /api/traces — Query OpenTelemetry Distributed Request Traces
+ */
+app.get('/api/traces', (req: Request, res: Response) => {
+  const { service, status, minDurationMs, search } = req.query;
+  const traces = telemetryTracing.getTraces({
+    service: service as any,
+    status: status as any,
+    minDurationMs: minDurationMs ? parseFloat(minDurationMs as string) : undefined,
+    search: search as string,
+  });
+
+  const latencyMetrics = telemetryTracing.getServiceLatencyMetrics();
+  const config = telemetryTracing.getConfig();
+
+  res.json({
+    total: traces.length,
+    backendConfig: config,
+    serviceLatencyMetrics: latencyMetrics,
+    traces,
+  });
+});
+
+/**
+ * GET /api/traces/jaeger/config — Jaeger & Zipkin Tracing Backend Status
+ */
+app.get('/api/traces/jaeger/config', (_req: Request, res: Response) => {
+  res.json({
+    status: 'ACTIVE',
+    config: telemetryTracing.getConfig(),
+    jaegerEndpoints: {
+      webUi: 'http://localhost:16686',
+      otlpHttp: 'http://localhost:4318/v1/traces',
+      otlpGrpc: 'http://localhost:4317',
+      zipkinHttp: 'http://localhost:9411/api/v2/spans',
+    },
+    dockerComposeService: 'gxq-jaeger (jaegertracing/all-in-one:1.60)',
+  });
+});
+
+/**
+ * POST /api/traces/jaeger/config — Update Tracing Backend Settings
+ */
+app.post('/api/traces/jaeger/config', (req: Request, res: Response) => {
+  const update = req.body;
+  telemetryTracing.updateConfig(update);
+  res.json({
+    success: true,
+    updatedConfig: telemetryTracing.getConfig(),
+  });
+});
+
+/**
+ * GET /api/traces/:traceId — Get Detailed Trace with Full Span Hierarchy
+ */
+app.get('/api/traces/:traceId', (req: Request, res: Response) => {
+  const trace = telemetryTracing.getTraceById(req.params.traceId);
+  if (!trace) {
+    return res.status(404).json({ error: 'Trace not found in OpenTelemetry buffer' });
+  }
+  res.json(trace);
+});
+
+/**
+ * POST /api/traces/dispatch — Execute Simulated Inter-Service Distributed Traced Request
+ */
+app.post('/api/traces/dispatch', async (req: Request, res: Response) => {
+  const { endpoint, method, userAddress, transactionHash, simulateCacheMiss, simulateSlowDb, simulateError } = req.body || {};
+  
+  const trace = await telemetryTracing.executeTracedRequest({
+    endpoint: endpoint || '/stats',
+    method: method || 'GET',
+    userAddress,
+    transactionHash,
+    simulateCacheMiss: Boolean(simulateCacheMiss),
+    simulateSlowDb: Boolean(simulateSlowDb),
+    simulateError: Boolean(simulateError),
+  });
+
+  res.json({
+    success: true,
+    trace,
+  });
+});
+
+/**
+ * GET /api/logs — Query Winston Structured Logs by Environment, Level & Context
+ */
+app.get('/api/logs', (req: Request, res: Response) => {
+  const { environment, level, service, search, limit } = req.query;
+  const logs = logger.getLogs({
+    environment: environment as any,
+    level: level as any,
+    service: service as string,
+    search: search as string,
+    limit: limit ? parseInt(limit as string, 10) : 100,
+  });
+
+  res.json({
+    environment: logger.getEnvironment(),
+    total: logs.length,
+    logs,
+  });
+});
+
+/**
+ * POST /api/logs/simulate — Emit Structured Winston Log across Environments
+ */
+app.post('/api/logs/simulate', (req: Request, res: Response) => {
+  const { level, message, environment, context: ctx } = req.body || {};
+  if (environment) {
+    logger.setEnvironment(environment);
+  }
+
+  const lvl = level || 'info';
+  let logEntry;
+  if (lvl === 'error') {
+    logEntry = logger.error(message || 'Simulated error log entry', ctx);
+  } else if (lvl === 'warn') {
+    logEntry = logger.warn(message || 'Simulated warning log entry', ctx);
+  } else if (lvl === 'debug') {
+    logEntry = logger.debug(message || 'Simulated debug log entry', ctx);
+  } else {
+    logEntry = logger.info(message || 'Simulated informational log entry', ctx);
+  }
+
+  res.json({
+    success: true,
+    logEntry,
   });
 });
 

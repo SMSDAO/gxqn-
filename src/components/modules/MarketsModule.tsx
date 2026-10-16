@@ -40,11 +40,7 @@ interface MarketsModuleProps {
 }
 
 import { D3Heatmap } from '../common/D3Heatmap';
-
-interface MarketsModuleProps {
-  markets: MarketSnapshot[];
-  onNavigateToSwap: () => void;
-}
+import { ReorderableCardSection, SectionItem } from '../common/ReorderableCardSection';
 
 type Timeframe = '1H' | '24H' | '7D' | '30D' | '1Y';
 type ChartViewMode = 'candlestick' | 'corridor' | 'volatility' | 'heatmap';
@@ -329,26 +325,15 @@ export const MarketsModule: React.FC<MarketsModuleProps> = ({ markets, onNavigat
     return null;
   };
 
-  return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      
-      {/* Header */}
-      <div className="flex items-center justify-between">
+  const marketSections: SectionItem[] = [
+    {
+      id: 'markets_chart',
+      title: `${activeSnap?.symbol} Interactive Candlestick & Corridor`,
+      subtitle: `Trading Pair: ${activeSnap?.baseAsset} / ${activeSnap?.quoteAsset} • ${volRating} VOLATILITY (${currentVol}%)`,
+      neonColor: 'blue',
+      icon: <TrendingUp className="w-4 h-4 text-[#00A8FF]" />,
+      content: (
         <div>
-          <h2 className="text-xl font-black text-white tracking-wide flex items-center gap-2">
-            <Radio className="w-5 h-5 text-[#10B981] animate-pulse" />
-            <span>REAL LIVE MARKET MONITOR</span>
-          </h2>
-          <p className="text-xs text-gray-400">
-            Real-time public tickers, interactive candlestick price charts, and multi-timeframe volatility analytics
-          </p>
-        </div>
-        <StatusBadge status={activeSnap?.status || 'LIVE'} />
-      </div>
-
-      {/* Selected Market Hero Card */}
-      <GlassCard level={3} glow="blue" className="p-4 sm:p-6">
-        
         {/* Quick Token Selector Pills */}
         <div className="flex items-center justify-between gap-3 pb-3 mb-4 border-b border-white/10 overflow-x-auto scrollbar-none">
           <div className="flex items-center gap-1.5 shrink-0">
@@ -810,20 +795,16 @@ export const MarketsModule: React.FC<MarketsModuleProps> = ({ markets, onNavigat
             </span>
           </div>
         </div>
-      </GlassCard>
-
-      {/* All Verified Pairs Table */}
-      <GlassCard level={2} className="p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-            <BarChart2 className="w-4 h-4 text-[#00A8FF]" />
-            <span>All Monitored Pairs ({markets.length})</span>
-          </h3>
-          <span className="text-[11px] font-mono text-gray-500">
-            Click pair to visualize candlestick price chart
-          </span>
         </div>
-
+      ),
+    },
+    {
+      id: 'markets_pairs',
+      title: `All Monitored Pairs Registry (${markets.length})`,
+      subtitle: 'Click pair to visualize candlestick price chart & orderbook depth',
+      neonColor: 'green',
+      icon: <BarChart2 className="w-4 h-4 text-[#10B981]" />,
+      content: (
         <div className="overflow-x-auto">
           <table className="w-full text-left font-mono text-xs">
             <thead>
@@ -887,8 +868,31 @@ export const MarketsModule: React.FC<MarketsModuleProps> = ({ markets, onNavigat
             </tbody>
           </table>
         </div>
-      </GlassCard>
+      ),
+    },
+  ];
 
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-white tracking-wide flex items-center gap-2">
+            <Radio className="w-5 h-5 text-[#10B981] animate-pulse" />
+            <span>REAL LIVE MARKET MONITOR</span>
+          </h2>
+          <p className="text-xs text-gray-400">
+            Real-time public tickers, interactive candlestick price charts, and multi-timeframe volatility analytics
+          </p>
+        </div>
+        <StatusBadge status={activeSnap?.status || 'LIVE'} />
+      </div>
+
+      <ReorderableCardSection
+        storageKey="gxq_markets_layout"
+        items={marketSections}
+        defaultOrder={['markets_chart', 'markets_pairs']}
+      />
     </div>
   );
 };

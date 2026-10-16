@@ -3,6 +3,7 @@ import { GlassCard } from '../common/GlassCard';
 import { StatusBadge } from '../common/StatusBadge';
 import { AI_INSIGHTS, SCORE_DATABASE, ScoreDetails, AISignalInsight } from '../../services/aiIntelligence';
 import { Sparkles, ShieldCheck, TrendingUp, AlertTriangle, Layers, Info, CheckCircle2 } from 'lucide-react';
+import { ReorderableCardSection, SectionItem } from '../common/ReorderableCardSection';
 
 interface AIIntelligenceModuleProps {
   onOpenScoreBreakdown: (score: ScoreDetails) => void;
@@ -36,65 +37,57 @@ export const AIIntelligenceModule: React.FC<AIIntelligenceModuleProps> = ({
     }, 1000);
   };
 
-  return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-black text-white tracking-wide flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#00A8FF]" />
-            <span>AI HEURISTIC COMMAND CENTER</span>
-          </h2>
-          <p className="text-xs text-gray-400">
-            Explainable quantitative signals, transparent score factor breakdowns, and verified on-chain telemetry
-          </p>
-        </div>
-        <StatusBadge status="ACTIVE" />
-      </div>
+  const aiSections: SectionItem[] = [
+    {
+      id: 'ai_scores',
+      title: 'Algorithmic Health & Safety Scorecards',
+      subtitle: 'Transparent mathematical breakdown across Portfolio, Token Health, Protocol Safety and Vitality',
+      neonColor: 'blue',
+      icon: <ShieldCheck className="w-4 h-4 text-[#00A8FF]" />,
+      content: (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Object.entries(SCORE_DATABASE).map(([key, score]) => (
+            <div key={key} className="p-4 rounded-xl bg-black/40 border border-white/10 glow-card-blue flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
+                  <span className="truncate">{score.title}</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-[#00A8FF]">
+                    {score.grade}
+                  </span>
+                </div>
+                <div className="text-2xl font-black font-mono text-white">
+                  {score.totalScore}<span className="text-xs text-gray-500">/{score.maxScore}</span>
+                </div>
+                <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
+                  {score.summary}
+                </p>
+              </div>
 
-      {/* Transparent Score Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Object.entries(SCORE_DATABASE).map(([key, score]) => (
-          <GlassCard key={key} level={2} className="p-5 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
-                <span className="truncate">{score.title}</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-[#00A8FF]">
-                  {score.grade}
-                </span>
-              </div>
-              <div className="text-2xl font-black font-mono text-white">
-                {score.totalScore}<span className="text-xs text-gray-500">/{score.maxScore}</span>
-              </div>
-              <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
-                {score.summary}
-              </p>
+              <button
+                onClick={() => onOpenScoreBreakdown(score)}
+                className="mt-4 pt-3 border-t border-white/10 text-xs font-semibold text-[#00A8FF] hover:underline flex items-center justify-between"
+              >
+                <span>View Mathematical Breakdown</span>
+                <span>→</span>
+              </button>
             </div>
-
-            <button
-              onClick={() => onOpenScoreBreakdown(score)}
-              className="mt-4 pt-3 border-t border-white/10 text-xs font-semibold text-[#00A8FF] hover:underline flex items-center justify-between"
-            >
-              <span>View Mathematical Breakdown</span>
-              <span>→</span>
-            </button>
-          </GlassCard>
-        ))}
-      </div>
-
-      {/* Heuristic Signals Feed */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-300">
-          Real-Time Calibrated Analytical Signals
-        </h3>
-
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'ai_signals',
+      title: 'Real-Time Calibrated Analytical Signals',
+      subtitle: 'Quantitatively grounded causal drivers, confidence scores and verifiable on-chain sources',
+      neonColor: 'purple',
+      icon: <Sparkles className="w-4 h-4 text-[#A855F7]" />,
+      content: (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {AI_INSIGHTS.map((sig) => (
-            <GlassCard key={sig.id} level={3} glow="blue" className="p-5 flex flex-col justify-between">
+            <div key={sig.id} className="p-4 rounded-xl bg-black/40 border border-white/10 glow-card-purple flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#00A8FF]/20 text-[#00A8FF] border border-[#00A8FF]/30 font-bold">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#A855F7]/20 text-[#A855F7] border border-[#A855F7]/30 font-bold">
                     {sig.category}
                   </span>
                   <span className="text-xs font-mono font-bold text-[#10B981]">
@@ -122,44 +115,73 @@ export const AIIntelligenceModule: React.FC<AIIntelligenceModuleProps> = ({
                 <div>Sources: {sig.dataSources.join(', ')}</div>
                 <div className="text-gray-400 italic">{sig.disclaimer}</div>
               </div>
-            </GlassCard>
+            </div>
           ))}
         </div>
+      ),
+    },
+    {
+      id: 'ai_query',
+      title: 'Interactive On-Chain Heuristic Query',
+      subtitle: 'Inspect liquidity depth, smart contract vulnerability and token velocity',
+      neonColor: 'green',
+      icon: <TrendingUp className="w-4 h-4 text-[#10B981]" />,
+      content: (
+        <div className="space-y-4">
+          <p className="text-xs text-gray-400">
+            Query contract metrics, AMM slippage vulnerability, or token velocity to generate structured causal explanations.
+          </p>
+
+          <form onSubmit={handleRunAnalysis} className="flex gap-3">
+            <input
+              type="text"
+              placeholder="e.g. Inspect GXQ AMM pool liquidity depth and impermanent loss risk..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white outline-none focus:border-[#00A8FF]"
+            />
+            <button
+              type="submit"
+              disabled={analyzing}
+              className="px-5 py-2.5 rounded-xl bg-[#00A8FF] text-black font-bold text-xs uppercase tracking-wide hover:brightness-110 active:scale-95 transition-all"
+            >
+              {analyzing ? 'Analyzing...' : 'Run Query'}
+            </button>
+          </form>
+
+          {customInsight && (
+            <div className="p-4 rounded-xl bg-black/60 border border-[#00A8FF]/30 text-xs font-mono text-gray-200 whitespace-pre-line leading-relaxed">
+              {customInsight}
+            </div>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-white tracking-wide flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-[#00A8FF]" />
+            <span>AI HEURISTIC COMMAND CENTER</span>
+          </h2>
+          <p className="text-xs text-gray-400">
+            Explainable quantitative signals, transparent score factor breakdowns, and verified on-chain telemetry
+          </p>
+        </div>
+        <StatusBadge status="ACTIVE" />
       </div>
 
-      {/* Interactive Heuristic Query Box */}
-      <GlassCard level={2} className="p-6">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-2 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-[#00A8FF]" />
-          <span>Interactive On-Chain Heuristic Query</span>
-        </h3>
-        <p className="text-xs text-gray-400 mb-4">
-          Query contract metrics, AMM slippage vulnerability, or token velocity to generate structured causal explanations.
-        </p>
-
-        <form onSubmit={handleRunAnalysis} className="flex gap-3">
-          <input
-            type="text"
-            placeholder="e.g. Inspect GXQ AMM pool liquidity depth and impermanent loss risk..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white outline-none focus:border-[#00A8FF]"
-          />
-          <button
-            type="submit"
-            disabled={analyzing}
-            className="px-5 py-2.5 rounded-xl bg-[#00A8FF] text-black font-bold text-xs uppercase tracking-wide hover:brightness-110 active:scale-95 transition-all"
-          >
-            {analyzing ? 'Analyzing...' : 'Run Query'}
-          </button>
-        </form>
-
-        {customInsight && (
-          <div className="mt-4 p-4 rounded-xl bg-black/60 border border-[#00A8FF]/30 text-xs font-mono text-gray-200 whitespace-pre-line leading-relaxed">
-            {customInsight}
-          </div>
-        )}
-      </GlassCard>
+      {/* Touch-Optimized Drag-and-Drop Reorderable Modules */}
+      <ReorderableCardSection
+        storageKey="gxq_ai_intelligence_layout"
+        items={aiSections}
+        defaultOrder={['ai_scores', 'ai_signals', 'ai_query']}
+      />
     </div>
   );
 };

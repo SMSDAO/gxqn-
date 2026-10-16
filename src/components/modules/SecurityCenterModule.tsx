@@ -5,6 +5,7 @@ import { SmartWalletUser } from '../../services/smartWallet';
 import { telemetry, TelemetryEvent } from '../../services/telemetry';
 import { ShieldCheck, Lock, Key, Terminal, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { WalletEncryptionService } from '../../services/walletEncryption';
+import { ReorderableCardSection, SectionItem } from '../common/ReorderableCardSection';
 
 interface SecurityCenterProps {
   currentUser: SmartWalletUser | null;
@@ -20,81 +21,72 @@ export const SecurityCenterModule: React.FC<SecurityCenterProps> = ({ currentUse
     return unsub;
   }, []);
 
-  return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-black text-white tracking-wide flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-[#10B981]" />
-            <span>ENTERPRISE SECURITY & AUDIT ENCLAVE</span>
-          </h2>
-          <p className="text-xs text-gray-400">
-            Cryptographic non-custodial integrity, zero-leak telemetry verification, and correlation ID tracking
-          </p>
+  const securitySections: SectionItem[] = [
+    {
+      id: 'security_posture',
+      title: 'Cryptographic Security Posture & Non-Custodial Isolation',
+      subtitle: 'Zero private keys committed, ERC-4337 modular bundler, and correlation ID enforcement',
+      neonColor: 'green',
+      icon: <ShieldCheck className="w-4 h-4 text-[#10B981]" />,
+      content: (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl bg-black/40 border border-[#10B981]/30 glow-card-green">
+            <div className="flex items-center gap-2 text-xs text-gray-400 mb-2 font-mono">
+              <Lock className="w-4 h-4 text-[#10B981]" />
+              <span>Zero-Knowledge Enclave</span>
+            </div>
+            <div className="text-sm font-bold text-white font-mono flex items-center gap-1.5 text-[#10B981]">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>ZERO KEYS COMMITTED</span>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-2 leading-relaxed font-mono">
+              All signing occurs client-side or via AA bundler paymaster. Private keys never touch telemetry or backend servers.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-black/40 border border-white/10 glow-card-orange">
+            <div className="flex items-center gap-2 text-xs text-gray-400 mb-2 font-mono">
+              <Key className="w-4 h-4 text-[#FF7A00]" />
+              <span>Account Abstraction</span>
+            </div>
+            <div className="text-sm font-bold text-white font-mono text-[#FF7A00]">
+              ERC-4337 MODULAR
+            </div>
+            <p className="text-[11px] text-gray-400 mt-2 leading-relaxed font-mono">
+              Deterministic email derivation & pluggable multi-provider adapters (ZeroDev, Biconomy, Privy).
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-black/40 border border-white/10 glow-card-purple">
+            <div className="flex items-center gap-2 text-xs text-gray-400 mb-2 font-mono">
+              <Terminal className="w-4 h-4 text-[#A855F7]" />
+              <span>Structured Observability</span>
+            </div>
+            <div className="text-sm font-bold text-white font-mono text-[#A855F7]">
+              CORRELATION ID ENFORCED
+            </div>
+            <p className="text-[11px] text-gray-400 mt-2 leading-relaxed font-mono">
+              Every critical operation is assigned an immutable correlation ID for auditability and trace verification.
+            </p>
+          </div>
         </div>
-        <StatusBadge status="SECURE" />
-      </div>
-
-      {/* Security Posture Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <GlassCard level={3} glow="blue" className="p-5">
-          <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
-            <Lock className="w-4 h-4 text-[#00A8FF]" />
-            <span>Private Key Zero-Knowledge Enclave</span>
-          </div>
-          <div className="text-sm font-bold text-white font-mono flex items-center gap-1.5 text-[#10B981]">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>ZERO PRIVATE KEYS COMMITTED</span>
-          </div>
-          <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
-            All signing occurs client-side or via AA bundler paymaster. Private keys and seeds never touch telemetry or backend servers.
-          </p>
-        </GlassCard>
-
-        <GlassCard level={2} className="p-5">
-          <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
-            <Key className="w-4 h-4 text-[#FF7A00]" />
-            <span>Account Abstraction Isolation</span>
-          </div>
-          <div className="text-sm font-bold text-white font-mono">
-            ERC-4337 MODULAR
-          </div>
-          <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
-            Deterministic email derivation & pluggable multi-provider adapters (ZeroDev, Biconomy, Privy).
-          </p>
-        </GlassCard>
-
-        <GlassCard level={2} className="p-5">
-          <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
-            <Terminal className="w-4 h-4 text-[#A855F7]" />
-            <span>Structured Observability</span>
-          </div>
-          <div className="text-sm font-bold text-white font-mono">
-            CORRELATION ID ENFORCED
-          </div>
-          <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
-            Every critical operation is assigned an immutable correlation ID for auditability and trace verification.
-          </p>
-        </GlassCard>
-      </div>
-
-      {/* 2026-2027 Top-Tier Wallet Encryption & Universal Key Export Vault */}
-      <WalletEncryptionVaultSection />
-
-      {/* Real-time Telemetry Log Viewer */}
-      <GlassCard level={2} className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Terminal className="w-4 h-4 text-[#00A8FF]" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-              Real-Time Security Audit Telemetry ({logs.length} Recorded Events)
-            </h3>
-          </div>
-          <span className="text-[10px] text-gray-500 font-mono">Stream Auto-Subscribed</span>
-        </div>
-
+      ),
+    },
+    {
+      id: 'security_vault',
+      title: 'Top-Tier Wallet Encryption & Universal Key Export Vault',
+      subtitle: 'Hardware security enclave, Argon2 / AES-GCM keystore backup and recovery',
+      neonColor: 'orange',
+      icon: <Key className="w-4 h-4 text-[#FF7A00]" />,
+      content: <WalletEncryptionVaultSection />,
+    },
+    {
+      id: 'security_telemetry',
+      title: `Real-Time Security Audit Telemetry (${logs.length} Recorded Events)`,
+      subtitle: 'Stream auto-subscribed, immutable event payloads and correlation ID verification',
+      neonColor: 'blue',
+      icon: <Terminal className="w-4 h-4 text-[#00A8FF]" />,
+      content: (
         <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
           {logs.map((log) => (
             <div
@@ -123,7 +115,33 @@ export const SecurityCenterModule: React.FC<SecurityCenterProps> = ({ currentUse
             </div>
           ))}
         </div>
-      </GlassCard>
+      ),
+    },
+  ];
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-white tracking-wide flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-[#10B981]" />
+            <span>ENTERPRISE SECURITY & AUDIT ENCLAVE</span>
+          </h2>
+          <p className="text-xs text-gray-400">
+            Cryptographic non-custodial integrity, zero-leak telemetry verification, and correlation ID tracking
+          </p>
+        </div>
+        <StatusBadge status="SECURE" />
+      </div>
+
+      {/* Touch-Optimized Drag-and-Drop Reorderable Security Modules */}
+      <ReorderableCardSection
+        storageKey="gxq_security_center_layout"
+        items={securitySections}
+        defaultOrder={['security_posture', 'security_vault', 'security_telemetry']}
+      />
     </div>
   );
 };

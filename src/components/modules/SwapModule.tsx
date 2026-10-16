@@ -24,6 +24,7 @@ import {
   Twitter,
   Radio
 } from 'lucide-react';
+import { ReorderableCardSection, SectionItem } from '../common/ReorderableCardSection';
 
 interface SwapModuleProps {
   envConfig: EnvironmentConfig;
@@ -191,139 +192,171 @@ export const SwapModule: React.FC<SwapModuleProps> = ({
     onTxCompleted();
   };
 
-  return (
-    <div className="max-w-xl mx-auto space-y-6">
-      
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-black text-white tracking-wide flex items-center gap-2">
-            <span>DEX SWAP & AUTOMATED LIQUIDITY POOLS</span>
-          </h2>
-          <p className="text-xs text-gray-400">
-            Swap native GXQ, bridged USDC, and all community-launched tokens with automatic indexing
-          </p>
-        </div>
-        <StatusBadge status={isSwapPaused ? 'OFFLINE' : 'LIVE'} />
-      </div>
-
-      {/* Main Glass Swap Card */}
-      <GlassCard level={3} glow="blue" className="p-6 relative overflow-hidden">
-        
-        {/* Card Header & Settings */}
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-mono font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#00A8FF]" />
-            <span>Constant Product AMM (x * y = k)</span>
-          </span>
-
-          <div className="flex items-center gap-2 text-xs font-mono text-gray-400">
-            <span>Slippage:</span>
-            {[0.1, 0.5, 1.0].map((s) => (
-              <button
-                key={s}
-                onClick={() => setSlippage(s)}
-                className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
-                  slippage === s ? 'bg-[#00A8FF] text-white font-bold' : 'bg-white/5 hover:bg-white/10 text-gray-300'
-                }`}
-              >
-                {s}%
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* FROM BOX */}
-        <div className="p-4 rounded-2xl bg-black/40 border border-white/10 hover:border-white/20 transition-all space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-400 font-mono">
-            <span>You Pay</span>
-            <span>
-              Balance: <strong className="text-white">{fromToken.balance.toLocaleString()} {fromToken.symbol}</strong>
+  const swapSections: SectionItem[] = [
+    {
+      id: 'swap_core',
+      title: 'SimpleSwap AMM Execution Core',
+      subtitle: `Constant Product AMM (x * y = k) • 0.30% Fee Vault`,
+      neonColor: 'orange',
+      icon: <ArrowDownUp className="w-4 h-4 text-[#FF7A00]" />,
+      content: (
+        <div className="space-y-4">
+          {/* Card Header & Settings */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#00A8FF]" />
+              <span>Slippage Tolerance</span>
             </span>
+
+            <div className="flex items-center gap-2 text-xs font-mono text-gray-400">
+              {[0.1, 0.5, 1.0].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSlippage(s)}
+                  className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
+                    slippage === s ? 'bg-[#00A8FF] text-white font-bold' : 'bg-white/5 hover:bg-white/10 text-gray-300'
+                  }`}
+                >
+                  {s}%
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <input
-              type="number"
-              placeholder="0.0"
-              value={fromAmount}
-              onChange={(e) => setFromAmount(e.target.value)}
-              className="w-full bg-transparent text-2xl font-mono font-bold text-white outline-none"
-            />
-
-            {/* Token Selector Button */}
-            <button
-              onClick={() => setTokenModalTarget('from')}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-mono text-xs font-bold transition-all shrink-0"
-            >
-              <img src={fromToken.logoUrl} alt={fromToken.symbol} className="w-5 h-5 rounded-full object-cover bg-black" />
-              <span>{fromToken.symbol}</span>
-              <span className="text-[10px] text-[#00A8FF] bg-[#00A8FF]/20 px-1.5 py-0.5 rounded">[{fromToken.symbol}]</span>
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between text-[11px] text-gray-500 font-mono">
-            <span>~${(parsedFromAmount * fromToken.priceUsd).toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</span>
-            <button
-              onClick={() => setFromAmount(fromToken.balance.toString())}
-              className="text-[#00A8FF] hover:underline"
-            >
-              MAX
-            </button>
-          </div>
-        </div>
-
-        {/* INVERT DIRECTION BUTTON */}
-        <div className="flex justify-center -my-2.5 relative z-10">
-          <button
-            onClick={handleSwapTokensDirection}
-            className="w-9 h-9 rounded-full bg-[#070B12] border border-[#00A8FF]/40 text-[#00A8FF] hover:border-[#00A8FF] hover:scale-110 shadow-[0_0_15px_rgba(0,168,255,0.3)] flex items-center justify-center transition-all"
-            title="Swap Tokens Direction"
-          >
-            <ArrowDownUp className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* TO BOX */}
-        <div className="p-4 rounded-2xl bg-black/40 border border-white/10 hover:border-white/20 transition-all space-y-2 mt-2">
-          <div className="flex items-center justify-between text-xs text-gray-400 font-mono">
-            <span>You Receive (Estimated)</span>
-            <span>
-              Balance: <strong className="text-white">{toToken.balance.toLocaleString()} {toToken.symbol}</strong>
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="w-full text-2xl font-mono font-bold text-white truncate">
-              {estimatedOutput > 0 ? estimatedOutput.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 }) : '0.00'}
+          {/* FROM BOX */}
+          <div className="p-4 rounded-2xl bg-black/40 border border-white/10 hover:border-white/20 transition-all space-y-2 glow-card-blue">
+            <div className="flex items-center justify-between text-xs text-gray-400 font-mono">
+              <span>You Pay</span>
+              <span>
+                Balance: <strong className="text-white">{fromToken.balance.toLocaleString()} {fromToken.symbol}</strong>
+              </span>
             </div>
 
-            {/* Token Selector Button */}
+            <div className="flex items-center justify-between gap-3">
+              <input
+                type="number"
+                placeholder="0.0"
+                value={fromAmount}
+                onChange={(e) => setFromAmount(e.target.value)}
+                className="w-full bg-transparent text-2xl font-mono font-bold text-white outline-none"
+              />
+
+              {/* Token Selector Button */}
+              <button
+                onClick={() => setTokenModalTarget('from')}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-mono text-xs font-bold transition-all shrink-0"
+              >
+                <img src={fromToken.logoUrl} alt={fromToken.symbol} className="w-5 h-5 rounded-full object-cover bg-black" />
+                <span>{fromToken.symbol}</span>
+                <span className="text-[10px] text-[#00A8FF] bg-[#00A8FF]/20 px-1.5 py-0.5 rounded">[{fromToken.symbol}]</span>
+                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-gray-500 font-mono">
+              <span>~${(parsedFromAmount * fromToken.priceUsd).toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</span>
+              <button
+                onClick={() => setFromAmount(fromToken.balance.toString())}
+                className="text-[#00A8FF] hover:underline"
+              >
+                MAX
+              </button>
+            </div>
+          </div>
+
+          {/* INVERT DIRECTION BUTTON */}
+          <div className="flex justify-center -my-2.5 relative z-10">
             <button
-              onClick={() => setTokenModalTarget('to')}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-mono text-xs font-bold transition-all shrink-0"
+              onClick={handleSwapTokensDirection}
+              className="w-9 h-9 rounded-full bg-[#070B12] border border-[#00A8FF]/40 text-[#00A8FF] hover:border-[#00A8FF] hover:scale-110 shadow-[0_0_15px_rgba(0,168,255,0.3)] flex items-center justify-center transition-all"
+              title="Swap Tokens Direction"
             >
-              <img src={toToken.logoUrl} alt={toToken.symbol} className="w-5 h-5 rounded-full object-cover bg-black" />
-              <span>{toToken.symbol}</span>
-              <span className="text-[10px] text-[#00A8FF] bg-[#00A8FF]/20 px-1.5 py-0.5 rounded">[{toToken.symbol}]</span>
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+              <ArrowDownUp className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-gray-500 font-mono">
-            <span>~${(estimatedOutput * toToken.priceUsd).toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</span>
-            {toToken.verificationStatus === 'AUTOMATIC_VERIFIED_SAFE' && (
-              <span className="text-[#10B981] flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3" />
-                <span>Verified Safe</span>
+          {/* TO BOX */}
+          <div className="p-4 rounded-2xl bg-black/40 border border-white/10 hover:border-white/20 transition-all space-y-2 glow-card-purple">
+            <div className="flex items-center justify-between text-xs text-gray-400 font-mono">
+              <span>You Receive (Estimated)</span>
+              <span>
+                Balance: <strong className="text-white">{toToken.balance.toLocaleString()} {toToken.symbol}</strong>
               </span>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* SWAP ROUTE & ACCRUAL METRICS */}
-        <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2 text-xs font-mono text-gray-300 mt-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="w-full text-2xl font-mono font-bold text-white truncate">
+                {estimatedOutput > 0 ? estimatedOutput.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 }) : '0.00'}
+              </div>
+
+              {/* Token Selector Button */}
+              <button
+                onClick={() => setTokenModalTarget('to')}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-mono text-xs font-bold transition-all shrink-0"
+              >
+                <img src={toToken.logoUrl} alt={toToken.symbol} className="w-5 h-5 rounded-full object-cover bg-black" />
+                <span>{toToken.symbol}</span>
+                <span className="text-[10px] text-[#00A8FF] bg-[#00A8FF]/20 px-1.5 py-0.5 rounded">[{toToken.symbol}]</span>
+                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-gray-500 font-mono">
+              <span>~${(estimatedOutput * toToken.priceUsd).toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</span>
+              {toToken.verificationStatus === 'AUTOMATIC_VERIFIED_SAFE' && (
+                <span className="text-[#10B981] flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Verified Safe</span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Error / Warning Alert */}
+          {errorMessage && (
+            <div className="p-3 rounded-xl bg-[#FF304F]/15 border border-[#FF304F]/40 text-xs text-[#FF304F] flex items-center gap-2 font-mono">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {/* ACTION BUTTON */}
+          <button
+            onClick={handleExecuteSwap}
+            disabled={isSwapPaused || isSwapping}
+            className={`w-full py-3.5 rounded-xl font-mono text-xs font-black tracking-wider uppercase flex items-center justify-center gap-2 transition-all ${
+              isSwapPaused
+                ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-[#00A8FF] via-[#008CFF] to-[#7928CA] hover:brightness-110 text-white shadow-[0_0_20px_rgba(0,168,255,0.4)] active:scale-98'
+            }`}
+          >
+            <ArrowDownUp className="w-4 h-4" />
+            <span>{isSwapping ? 'Executing Swapping Contract...' : `Swap ${fromToken.symbol} for ${toToken.symbol}`}</span>
+          </button>
+
+          {/* Recent Transaction Notification */}
+          {recentTxHash && (
+            <div className="p-3 rounded-xl bg-[#10B981]/15 border border-[#10B981]/30 text-xs font-mono text-[#10B981] flex items-center justify-between animate-fadeIn">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Swap confirmed on GXQ Ledger!</span>
+              </span>
+              <span className="text-[11px] text-gray-300">
+                Tx: {recentTxHash.slice(0, 8)}...{recentTxHash.slice(-6)}
+              </span>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'swap_matrix',
+      title: 'Routing & Microstructure Verification',
+      subtitle: 'Deterministic exchange rate, price impact & zero-sandwich guard',
+      neonColor: 'blue',
+      icon: <Layers className="w-4 h-4 text-[#00A8FF]" />,
+      content: (
+        <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-2 text-xs font-mono text-gray-300">
           <div className="flex justify-between">
             <span className="text-gray-400">Exchange Rate</span>
             <span className="text-white font-bold">1 {fromToken.symbol} ≈ {rawRatio.toFixed(4)} {toToken.symbol}</span>
@@ -340,43 +373,67 @@ export const SwapModule: React.FC<SwapModuleProps> = ({
             <span className="text-gray-400">Liquidity Provider Fee (0.30%)</span>
             <span>{(parsedFromAmount * 0.003).toFixed(4)} {fromToken.symbol}</span>
           </div>
+          <div className="flex justify-between pt-1 border-t border-white/5">
+            <span className="text-gray-400">Target Router Contract</span>
+            <span className="text-[#00A8FF]">SimpleSwap.sol (0x742d...44e)</span>
+          </div>
         </div>
+      ),
+    },
+    {
+      id: 'swap_pools',
+      title: 'Top Verified Pools Hotlist',
+      subtitle: 'Instant one-tap selection into AMM router',
+      neonColor: 'green',
+      icon: <Sparkles className="w-4 h-4 text-[#10B981]" />,
+      content: (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono text-xs">
+          {tokens.slice(0, 6).map((t) => (
+            <button
+              key={t.address}
+              onClick={() => {
+                if (t.symbol !== fromTokenSymbol) {
+                  setToTokenSymbol(t.symbol);
+                } else {
+                  setToTokenSymbol(fromTokenSymbol === 'USDC' ? 'GXQ' : 'USDC');
+                }
+                triggerFlash('BLUE_FLASH');
+              }}
+              className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between text-left transition-all hover:border-[#00A8FF]/40"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <img src={t.logoUrl} alt={t.symbol} className="w-5 h-5 rounded-full object-cover bg-black shrink-0" />
+                <span className="font-bold text-white truncate">{t.symbol}</span>
+              </div>
+              <span className="text-[10px] text-emerald-400 shrink-0">${t.priceUsd > 100 ? t.priceUsd.toFixed(0) : t.priceUsd.toFixed(2)}</span>
+            </button>
+          ))}
+        </div>
+      ),
+    },
+  ];
 
-        {/* Error / Warning Alert */}
-        {errorMessage && (
-          <div className="p-3 rounded-xl bg-[#FF304F]/15 border border-[#FF304F]/40 text-xs text-[#FF304F] flex items-center gap-2 mt-4 font-mono">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{errorMessage}</span>
-          </div>
-        )}
+  return (
+    <div className="max-w-xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-white tracking-wide flex items-center gap-2">
+            <span>DEX SWAP & AUTOMATED LIQUIDITY POOLS</span>
+          </h2>
+          <p className="text-xs text-gray-400">
+            Swap native GXQ, bridged USDC, and all community-launched tokens with automatic indexing
+          </p>
+        </div>
+        <StatusBadge status={isSwapPaused ? 'OFFLINE' : 'LIVE'} />
+      </div>
 
-        {/* ACTION BUTTON */}
-        <button
-          onClick={handleExecuteSwap}
-          disabled={isSwapPaused || isSwapping}
-          className={`w-full mt-5 py-3.5 rounded-xl font-mono text-xs font-black tracking-wider uppercase flex items-center justify-center gap-2 transition-all ${
-            isSwapPaused
-              ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-              : 'bg-gradient-to-r from-[#00A8FF] via-[#008CFF] to-[#7928CA] hover:brightness-110 text-white shadow-[0_0_20px_rgba(0,168,255,0.4)]'
-          }`}
-        >
-          <ArrowDownUp className="w-4 h-4" />
-          <span>{isSwapping ? 'Executing Swapping Contract...' : `Swap ${fromToken.symbol} for ${toToken.symbol}`}</span>
-        </button>
-
-        {/* Recent Transaction Notification */}
-        {recentTxHash && (
-          <div className="mt-4 p-3 rounded-xl bg-[#10B981]/15 border border-[#10B981]/30 text-xs font-mono text-[#10B981] flex items-center justify-between animate-fadeIn">
-            <span className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Swap confirmed on GXQ Ledger!</span>
-            </span>
-            <span className="text-[11px] text-gray-300">
-              Tx: {recentTxHash.slice(0, 8)}...{recentTxHash.slice(-6)}
-            </span>
-          </div>
-        )}
-      </GlassCard>
+      {/* Touch-Optimized Reorderable Sections */}
+      <ReorderableCardSection
+        storageKey="gxq_swap_layout"
+        items={swapSections}
+        defaultOrder={['swap_core', 'swap_matrix', 'swap_pools']}
+      />
 
       {/* TOKEN SELECTOR MODAL WITH AUTOMATIC INDEXING & LOGOS */}
       {tokenModalTarget && (
